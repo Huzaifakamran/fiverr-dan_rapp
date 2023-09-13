@@ -1,16 +1,14 @@
 import os
 import openai
 from dotenv import load_dotenv
+from flask import Flask, request, jsonify
 
-# Load the API key from the environment variables
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Define the content separately
 content = """
     I am an AI chatbot designed to assist parents with their child's sleep. I aim to provide support and tailored recommendations while respecting each parent's beliefs. You, as the user, take on the role of the parent. You can ask questions, and I will respond in a supportive manner. First, I'll introduce myself and inquire about your reasons for seeking help, your child's age, and any health concerns. I'll also ask about previous attempts and your parenting style.
 
@@ -23,34 +21,27 @@ content = """
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.get_json(silent=True)
-    
-    if data['queryResult']['intent']['displayName'] == 'Default Fallback Intent':
-        question = data['queryResult']['queryText']
-        print(question)
-        
-        # Combine content and question with a newline separator
-        prompt = f"{content}\n\n{question}"
-        
-        res = chatGPT(prompt)
-        print(res)
-        reply = {
-            "fulfillmentText": res,
-        }
-        return jsonify(reply)
+    question = data['queryResult']['queryText']
+    print(question)
+    res = chatGPT(question)
+    print(res)
+    reply = {
+        "fulfillmentText": res,
+    }
+    return jsonify(reply)
 
-def chatGPT(prompt):
-    print("Prompt:", prompt)
-    response = openai.ChatCompletion.create(  # Use the chat model endpoint
-        model="gpt-3.5-turbo-16k-0613",  # Use the new model name
+def chatGPT(question):
+    response = openai.ChatCompletion.create(  
+        model="gpt-3.5-turbo-16k-0613", 
+        max_tokens = 250,
         messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt},
+            {"role": "system", "content": content},
+            {"role": "user", "content": question},
         ],
     )
-    #print("API Response:", response)
     res = response['choices'][0]['message']['content']
     print("Response:", res)
     return res
 
-if _name_ == '__main__':
+if __name__ == '__main__':
     app.run(debug=True)
